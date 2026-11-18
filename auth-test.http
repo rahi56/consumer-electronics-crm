@@ -1,0 +1,28 @@
+
+### Register a user
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Rahim",
+  "username": "rahim01",
+  "password": "Rahim@12345",
+  "email": "rahim@example.com",
+  "phone": "+8801712345678",
+  "address": "Tangail",
+  "city": "Tangail",
+  "state": "Dhaka",
+  "zip": "1900"
+}
+
+### Login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "rahim@example.com",
+  "password": "Rahim@12345"
+}
+
+### Access protected endpoint without JWT
+GET http://localhost:8080/api/test/protected
