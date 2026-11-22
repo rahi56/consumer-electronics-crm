@@ -1,5 +1,5 @@
 
-package com.rahim.crm.repository;
+package com.rahim.crm.auth;
 
 import com.rahim.crm.entity.Role;
 import com.rahim.crm.entity.User;

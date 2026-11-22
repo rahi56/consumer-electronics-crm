@@ -1,12 +1,12 @@
 
-package com.rahim.crm.service;
+package com.rahim.crm.auth;
+
+import com.rahim.crm.dto.AuthResponse;
 import com.rahim.crm.dto.ForgotPasswordResponse;
 import com.rahim.crm.dto.RegisterRequest;
 import com.rahim.crm.entity.Role;
 import com.rahim.crm.entity.User;
 import com.rahim.crm.entity.PasswordResetOtp;
-import com.rahim.crm.repository.UserRepository;
-import com.rahim.crm.repository.PasswordResetOtpRepository;
 import com.rahim.crm.Security.JwtService;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class AuthService {
@@ -73,6 +75,7 @@ public class AuthService {
 
         user.setRole(Role.CUSTOMER);
         user.setEnabled(true);
+        user.setMustChangePassword(false);
 
         userRepository.save(user);
 
@@ -83,7 +86,7 @@ public class AuthService {
     // LOGIN
     // =========================
 
-    public String login(String email, String password) {
+    public AuthResponse login(String email, String password) {
 
         Authentication authentication =
                 authenticationManager.authenticate(
@@ -93,7 +96,20 @@ public class AuthService {
                         )
                 );
 
-        return jwtService.generateToken(authentication.getName());
+        String authenticatedEmail = authentication.getName();
+
+        User user = userRepository.findByEmailIgnoreCase(authenticatedEmail)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found")
+                );
+
+        String token = jwtService.generateToken(authenticatedEmail);
+
+        return new AuthResponse(
+                token,
+                "Bearer",
+                user.isMustChangePassword()
+        );
     }
 
     // =========================
@@ -122,6 +138,9 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
+
+        // First-login restriction is now cleared.
+        user.setMustChangePassword(false);
 
         userRepository.save(user);
 
@@ -166,7 +185,6 @@ public class AuthService {
                 otp
         );
     }
-
 
     // =========================
     // VERIFY OTP
@@ -230,6 +248,10 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
+
+        // A successful password reset also satisfies the requirement.
+        user.setMustChangePassword(false);
+
         userRepository.save(user);
 
         // OTP must be single-use.
@@ -237,4 +259,5 @@ public class AuthService {
 
         return "Password reset successfully";
     }
+
 }

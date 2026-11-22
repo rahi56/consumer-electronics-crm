@@ -2,7 +2,7 @@
 package com.rahim.crm.Security;
 
 import com.rahim.crm.entity.User;
-import com.rahim.crm.repository.UserRepository;
+import com.rahim.crm.auth.UserRepository;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -14,7 +14,6 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
-    // Constructor injection
     public CustomUserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
@@ -30,11 +29,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                         )
                 );
 
-        return org.springframework.security.core.userdetails.User
-                .withUsername(user.getEmail())
-                .password(user.getPassword())
-                .authorities("ROLE_" + user.getRole().name())
-                .disabled(!user.isEnabled())
-                .build();
+        return new CustomUserPrincipal(user);
     }
 }

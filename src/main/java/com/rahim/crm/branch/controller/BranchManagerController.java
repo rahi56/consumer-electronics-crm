@@ -6,7 +6,8 @@ import com.rahim.crm.branch.service.BranchManagerService;
 import com.rahim.crm.dto.ApiResponse;
 
 import jakarta.validation.Valid;
-
+import com.rahim.crm.branch.dto.BranchManagerUpdateRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -100,5 +101,35 @@ public class BranchManagerController {
         );
     }
 
+
+    @PutMapping("/{managerId}")
+    public ResponseEntity<ApiResponse<BranchManagerResponse>> updateManager(
+            @PathVariable Long managerId,
+            @Valid @RequestBody BranchManagerUpdateRequest request) {
+
+        BranchManagerResponse response =
+                branchManagerService.updateManager(managerId, request);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Manager updated successfully.", response)
+        );
+    }
+
+
+    @PatchMapping("/{managerId}/reassign/{newBranchId}")
+    public ResponseEntity<ApiResponse<BranchManagerResponse>> reassignManager(
+            @PathVariable Long managerId,
+            @PathVariable Long newBranchId) {
+
+        BranchManagerResponse response =
+                branchManagerService.reassignManager(managerId, newBranchId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Branch manager reassigned successfully.",
+                        response
+                )
+        );
+    }
 
 }

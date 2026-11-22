@@ -3,7 +3,7 @@ package com.rahim.crm.config;
 
 import com.rahim.crm.entity.Role;
 import com.rahim.crm.entity.User;
-import com.rahim.crm.repository.UserRepository;
+import com.rahim.crm.auth.UserRepository;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;

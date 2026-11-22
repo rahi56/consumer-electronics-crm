@@ -6,8 +6,8 @@ import com.rahim.crm.branch.entity.Branch;
 import com.rahim.crm.branch.repository.BranchRepository;
 import com.rahim.crm.entity.Role;
 import com.rahim.crm.entity.User;
-import com.rahim.crm.repository.UserRepository;
-
+import com.rahim.crm.auth.UserRepository;
+import com.rahim.crm.branch.dto.BranchManagerUpdateRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -207,6 +207,63 @@ public class BranchManagerService {
                 branch.getName(),
                 manager.isEnabled()
         );
+    }
+
+
+    @Transactional
+    public BranchManagerResponse updateManager(
+            Long managerId,
+            BranchManagerUpdateRequest request) {
+
+        User manager = userRepository.findById(managerId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Manager not found."));
+
+        if (manager.getRole() != Role.BRANCH_MANAGER) {
+            throw new IllegalArgumentException(
+                    "The requested user is not a Branch Manager.");
+        }
+
+        manager.setName(request.getName());
+        manager.setPhone(request.getPhone());
+        manager.setAddress(request.getAddress());
+        manager.setCity(request.getCity());
+        manager.setState(request.getState());
+        manager.setZip(request.getZip());
+
+        User updatedManager = userRepository.save(manager);
+
+        return mapToResponse(updatedManager);
+    }
+
+    @Transactional
+    public BranchManagerResponse reassignManager(
+            Long managerId,
+            Long newBranchId) {
+
+        User manager = userRepository.findById(managerId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Manager not found."));
+
+        if (manager.getRole() != Role.BRANCH_MANAGER) {
+            throw new IllegalArgumentException(
+                    "The requested user is not a Branch Manager.");
+        }
+
+        Branch newBranch = branchRepository.findById(newBranchId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Branch not found."));
+
+        if (!newBranch.isActive()) {
+            throw new IllegalArgumentException(
+                    "Cannot assign manager to an inactive branch.");
+        }
+
+        manager.setBranch(newBranch);
+
+        User updatedManager = userRepository.save(manager);
+
+        return mapToResponse(updatedManager);
     }
 
 }

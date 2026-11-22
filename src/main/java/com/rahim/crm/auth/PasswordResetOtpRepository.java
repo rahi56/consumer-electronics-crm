@@ -1,4 +1,4 @@
-package com.rahim.crm.repository;
+package com.rahim.crm.auth;
 
 import com.rahim.crm.entity.PasswordResetOtp;
 import org.springframework.data.jpa.repository.JpaRepository;

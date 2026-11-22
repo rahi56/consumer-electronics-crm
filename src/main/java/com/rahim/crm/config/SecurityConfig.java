@@ -4,8 +4,11 @@ package com.rahim.crm.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import com.rahim.crm.Security.CustomUserDetailsService;
 import com.rahim.crm.Security.JwtAuthenticationFilter;
+import com.rahim.crm.Security.FirstLoginPasswordChangeFilter;
+
 import com.rahim.crm.dto.ErrorResponse;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,6 +36,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final FirstLoginPasswordChangeFilter firstLoginPasswordChangeFilter;
     private final CustomUserDetailsService userDetailsService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
@@ -41,9 +45,11 @@ public class SecurityConfig {
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
+            FirstLoginPasswordChangeFilter firstLoginPasswordChangeFilter,
             CustomUserDetailsService userDetailsService) {
 
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.firstLoginPasswordChangeFilter = firstLoginPasswordChangeFilter;
         this.userDetailsService = userDetailsService;
     }
 
@@ -68,14 +74,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
 
         http
                 .csrf(csrf -> csrf.disable())
 
                 .exceptionHandling(exception -> exception
 
-                        // 401 - Missing or invalid token
                         .authenticationEntryPoint((request, response, authException) -> {
                             ErrorResponse body = new ErrorResponse(
                                     HttpStatus.UNAUTHORIZED.value(),
@@ -86,7 +92,6 @@ public class SecurityConfig {
                             writeJson(response, HttpServletResponse.SC_UNAUTHORIZED, body);
                         })
 
-                        // 403 - Authenticated but insufficient role
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             ErrorResponse body = new ErrorResponse(
                                     HttpStatus.FORBIDDEN.value(),
@@ -99,24 +104,29 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public authentication endpoints
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/register",
                                 "/api/auth/login")
                         .permitAll()
 
-                        // ADMIN-only branch management
+                        // Authenticated users can change their password.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/change-password")
+                        .authenticated()
+
                         .requestMatchers("/api/branches/**")
                         .hasRole("ADMIN")
 
-                        // Existing admin role test endpoint
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/test/roles/admin")
                         .hasRole("ADMIN")
 
-                        // All other endpoints require authentication
+                        .requestMatchers("/api/technicians/**")
+                        .hasRole("ADMIN")
+
                         .anyRequest().authenticated())
 
                 .sessionManagement(session -> session
@@ -128,13 +138,16 @@ public class SecurityConfig {
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class)
 
+                .addFilterAfter(
+                        firstLoginPasswordChangeFilter,
+                        JwtAuthenticationFilter.class)
+
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());
 
         return http.build();
     }
 
-    // Prevent JWT filter from being registered twice.
     @Bean
     public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(
             JwtAuthenticationFilter filter) {
@@ -147,7 +160,18 @@ public class SecurityConfig {
         return registration;
     }
 
-    // Write JSON security error responses.
+    @Bean
+    public FilterRegistrationBean<FirstLoginPasswordChangeFilter>
+    firstLoginFilterRegistration(FirstLoginPasswordChangeFilter filter) {
+
+        FilterRegistrationBean<FirstLoginPasswordChangeFilter> registration =
+                new FilterRegistrationBean<>(filter);
+
+        registration.setEnabled(false);
+
+        return registration;
+    }
+
     private void writeJson(
             HttpServletResponse response,
             int status,
