@@ -14,6 +14,8 @@ public class BranchResponse {
     private String city;
     private String state;
     private String postalCode;
+    private Double latitude;
+    private Double longitude;
     private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -31,6 +33,8 @@ public class BranchResponse {
             String city,
             String state,
             String postalCode,
+            Double latitude,
+            Double longitude,
             boolean active,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
@@ -44,6 +48,8 @@ public class BranchResponse {
         this.city = city;
         this.state = state;
         this.postalCode = postalCode;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.active = active;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -83,6 +89,14 @@ public class BranchResponse {
 
     public String getPostalCode() {
         return postalCode;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
     }
 
     public boolean isActive() {

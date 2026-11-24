@@ -25,8 +25,9 @@ public class CustomerService {
     }
 
     // CREATE CUSTOMER
-    @Transactional
-    public CustomerResponse createCustomer(CustomerRequest request) {
+
+    /*public CustomerResponse createCustomer(CustomerRequest request) {
+        System.out.println("Service no Error");
 
         if (customerRepository.existsByPhone(request.getPhone())) {
             throw new ResponseStatusException(
@@ -56,7 +57,49 @@ public class CustomerService {
         Customer savedCustomer = customerRepository.save(customer);
 
         return mapToResponse(savedCustomer);
+    }*/
+    //temporary
+
+    @Transactional
+    public CustomerResponse createCustomer(CustomerRequest request) {
+
+        System.out.println("STEP 1: createCustomer entered");
+
+        System.out.println("STEP 2: Checking phone");
+        if (customerRepository.existsByPhone(request.getPhone())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Phone already exists"
+            );
+        }
+
+        System.out.println("STEP 3: Checking email");
+        if (request.getEmail() != null &&
+                !request.getEmail().isBlank() &&
+                customerRepository.existsByEmailIgnoreCase(request.getEmail())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Email already exists"
+            );
+        }
+
+        System.out.println("STEP 4: Generating customer code");
+        Customer customer = new Customer();
+        customer.setCustomerCode(generateCustomerCode());
+
+        System.out.println("STEP 5: Setting customer fields");
+        customer.setFullName(request.getFullName());
+        customer.setPhone(request.getPhone());
+        customer.setEmail(request.getEmail());
+        customer.setAddress(request.getAddress());
+        customer.setActive(true);
+
+        System.out.println("STEP 6: Saving customer");
+        Customer savedCustomer = customerRepository.save(customer);
+
+        System.out.println("STEP 7: Mapping response");
+        return mapToResponse(savedCustomer);
     }
+
+
 
     // UPDATE CUSTOMER
     @Transactional

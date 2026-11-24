@@ -5,6 +5,9 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 
 public class BranchRequest {
 
@@ -47,6 +50,16 @@ public class BranchRequest {
     @NotBlank(message = "Postal code is required")
     @Size(max = 15)
     private String postalCode;
+
+    @NotNull(message = "Branch latitude is required")
+    @DecimalMin(value = "-90.0", message = "Latitude must be at least -90")
+    @DecimalMax(value = "90.0", message = "Latitude cannot exceed 90")
+    private Double latitude;
+
+    @NotNull(message = "Branch longitude is required")
+    @DecimalMin(value = "-180.0", message = "Longitude must be at least -180")
+    @DecimalMax(value = "180.0", message = "Longitude cannot exceed 180")
+    private Double longitude;
 
     public String getName() {
         return name;
@@ -110,5 +123,21 @@ public class BranchRequest {
 
     public void setPostalCode(String postalCode) {
         this.postalCode = postalCode;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 }

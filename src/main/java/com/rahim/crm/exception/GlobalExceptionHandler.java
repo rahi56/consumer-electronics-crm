@@ -1,5 +1,5 @@
 package com.rahim.crm.exception;
-
+import org.springframework.web.server.ResponseStatusException;
 import com.rahim.crm.dto.ErrorResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -156,6 +156,26 @@ public class GlobalExceptionHandler {
     /**
      * Catch-all — prevents stack traces leaking to clients.
      */
+
+
+// Business exceptions such as duplicate phone or email (409 Conflict)
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(
+            ResponseStatusException ex,
+            HttpServletRequest request) {
+
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+
+        return buildResponse(
+                status,
+                status.getReasonPhrase(),
+                ex.getReason() != null ? ex.getReason() : status.getReasonPhrase(),
+                request
+        );
+    }
+
+
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(
             Exception ex,

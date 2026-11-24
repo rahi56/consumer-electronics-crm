@@ -31,6 +31,8 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<CustomerResponse>> createCustomer(
             @Valid @RequestBody CustomerRequest request) {
 
+        System.out.println("NOt in controller");
+
         CustomerResponse response =
                 customerService.createCustomer(request);
 

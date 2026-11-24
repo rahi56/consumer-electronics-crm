@@ -8,23 +8,28 @@ import com.rahim.crm.entity.Role;
 import com.rahim.crm.entity.User;
 import com.rahim.crm.entity.PasswordResetOtp;
 import com.rahim.crm.Security.JwtService;
+import com.rahim.crm.customer.entity.Customer;
+import com.rahim.crm.customer.repository.CustomerRepository;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Locale;
+import java.util.UUID;
 
 @Service
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -34,12 +39,14 @@ public class AuthService {
 
     public AuthService(
             UserRepository userRepository,
+            CustomerRepository customerRepository,
             PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
             JwtService jwtService,
             PasswordResetOtpRepository otpRepository) {
 
         this.userRepository = userRepository;
+        this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
@@ -47,39 +54,106 @@ public class AuthService {
     }
 
     // =========================
-    // REGISTER
+    // REGISTER CUSTOMER
     // =========================
 
     @Transactional
     public String register(RegisterRequest request) {
 
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
-            throw new IllegalArgumentException("Email is already registered");
+        String email = request.getEmail()
+                .trim()
+                .toLowerCase(Locale.ROOT);
+
+        String phone = request.getPhone().trim();
+
+        String username = request.getUsername().trim();
+
+        // Check existing login account
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Email is already registered"
+            );
         }
 
-        if (userRepository.existsByUsernameIgnoreCase(request.getUsername())) {
-            throw new IllegalArgumentException("Username is already taken");
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Username is already taken"
+            );
         }
 
+        // Do not allow public registration to claim an
+        // existing staff-created customer profile.
+        if (customerRepository.existsByEmailIgnoreCase(email)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "A customer profile already exists with this email. Please contact support."
+            );
+        }
+
+        if (customerRepository.existsByPhone(phone)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "A customer profile already exists with this phone number."
+            );
+        }
+
+        // Create login account
         User user = new User();
 
-        user.setName(request.getName());
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
+        user.setName(request.getName().trim());
+        user.setUsername(username);
+        user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setPhone(request.getPhone());
-        user.setAddress(request.getAddress());
-        user.setCity(request.getCity());
-        user.setState(request.getState());
-        user.setZip(request.getZip());
+        user.setPhone(phone);
+        user.setAddress(request.getAddress().trim());
+        user.setCity(request.getCity().trim());
+        user.setState(request.getState().trim());
+        user.setZip(request.getZip().trim());
 
         user.setRole(Role.CUSTOMER);
         user.setEnabled(true);
         user.setMustChangePassword(false);
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        // Create customer profile
+        Customer customer = new Customer();
+
+        customer.setCustomerCode(generateCustomerCode());
+        customer.setFullName(savedUser.getName());
+        customer.setEmail(savedUser.getEmail());
+        customer.setPhone(savedUser.getPhone());
+        customer.setAddress(savedUser.getAddress());
+        customer.setActive(true);
+
+        // Link customer profile to login account
+        customer.setUser(savedUser);
+
+        customerRepository.save(customer);
 
         return "Registration successful";
+    }
+
+    // =========================
+    // GENERATE CUSTOMER CODE
+    // =========================
+
+    private String generateCustomerCode() {
+
+        String customerCode;
+
+        do {
+            customerCode = "CUS-" +
+                    UUID.randomUUID()
+                            .toString()
+                            .substring(0, 8)
+                            .toUpperCase(Locale.ROOT);
+
+        } while (customerRepository.existsByCustomerCode(customerCode));
+
+        return customerCode;
     }
 
     // =========================
@@ -138,8 +212,6 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
-
-        // First-login restriction is now cleared.
         user.setMustChangePassword(false);
 
         userRepository.save(user);
@@ -173,7 +245,7 @@ public class AuthService {
 
         PasswordResetOtp resetOtp = new PasswordResetOtp();
 
-        resetOtp.setEmail(user.getEmail().toLowerCase());
+        resetOtp.setEmail(user.getEmail().toLowerCase(Locale.ROOT));
         resetOtp.setOtp(otp);
         resetOtp.setExpiryTime(LocalDateTime.now().plusMinutes(5));
         resetOtp.setVerified(false);
@@ -248,16 +320,13 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
-
-        // A successful password reset also satisfies the requirement.
         user.setMustChangePassword(false);
 
         userRepository.save(user);
 
-        // OTP must be single-use.
+        // OTP is single-use
         otpRepository.delete(resetOtp);
 
         return "Password reset successfully";
     }
-
 }

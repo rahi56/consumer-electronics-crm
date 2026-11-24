@@ -44,6 +44,10 @@ public class BranchService {
         branch.setState(request.getState());
         branch.setPostalCode(request.getPostalCode());
 
+        // Set branch coordinates
+        branch.setLatitude(request.getLatitude());
+        branch.setLongitude(request.getLongitude());
+
         Branch savedBranch = branchRepository.save(branch);
 
         return mapToResponse(savedBranch);
@@ -100,6 +104,10 @@ public class BranchService {
         branch.setState(request.getState());
         branch.setPostalCode(request.getPostalCode());
 
+        // Update branch coordinates
+        branch.setLatitude(request.getLatitude());
+        branch.setLongitude(request.getLongitude());
+
         Branch updatedBranch = branchRepository.save(branch);
 
         return mapToResponse(updatedBranch);
@@ -150,11 +158,11 @@ public class BranchService {
                 branch.getCity(),
                 branch.getState(),
                 branch.getPostalCode(),
+                branch.getLatitude(),
+                branch.getLongitude(),
                 branch.isActive(),
                 branch.getCreatedAt(),
                 branch.getUpdatedAt()
         );
     }
-
-
 }
